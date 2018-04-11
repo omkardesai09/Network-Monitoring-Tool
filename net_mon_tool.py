@@ -2,6 +2,7 @@ import time
 import sys
 from colorama import init, deinit, Fore, Style
 import subprocess
+import os.path
 
 print "Enter 3 additional parameters(filenames) while execution \n 1. Filename containing IP addresses of devices in topology \n 2. Filename containing username and password to setup SSH connection \n 3. Filename containing credentials to setup connection with MySQL database\n"
 
@@ -60,9 +61,22 @@ def valid_ip():
             print Fore.RED + "Check IP address list or device\n"
             sys.exit()
 
+def files_valid():
+    global ssh_credentials, mysql_credentials
+    if os.path.isfile(ssh_credentials) == True:
+        pass
+    else:
+        print Fore.RED + "File %s not found\n" %ssh_credentials
+        sys.exit()
+
+    if os.path.isfile(mysql_credentials) == True:
+        pass
+    else:
+        print Fore.RED + "File %s not found\n" %mysql_credentials
+        sys.exit()
 
 valid_ip()
-
+files_valid()
 
 
 
