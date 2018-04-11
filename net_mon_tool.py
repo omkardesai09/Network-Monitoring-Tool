@@ -1,6 +1,7 @@
 import time
 import sys
 from colorama import init, deinit, Fore, Style
+import subprocess
 
 print "Enter 3 additional parameters(filenames) while execution \n 1. Filename containing IP addresses of devices in topology \n 2. Filename containing username and password to setup SSH connection \n 3. Filename containing credentials to setup connection with MySQL database\n"
 
@@ -31,10 +32,37 @@ def valid_ip():
 
         else:
             print Fore.RED + "Invalid IP address: %s\n" %str(".".join(ip_octets))
+            sys.exit()
 
-    print "All IP addresses are valid.\n"
+    # Checking IP reachability
+    while True:
+        check = False
+        for ip in list_of_ip:
+            ping_reply = subprocess.call(['ping', '-c', '3', '-w', '3', '-q', '-n', ip], stdout=subprocess.PIPE)
+
+            if ping_reply == 0:
+                check = True
+                continue
+            elif ping_reply == 2:
+                print Fore.RED + "\nNo response from device %s" %ip
+                check = False
+                break
+            else:
+                print Fore.RED + "\nPing to %s is failed" %ip
+                check = False
+                break
+
+        if check == True:
+            print Fore.GREEN + "All devices are reachable\n"
+            break
+
+        elif check == False:
+            print Fore.RED + "Check IP address list or device\n"
+            sys.exit()
+
 
 valid_ip()
+
 
 
 
