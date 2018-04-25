@@ -129,13 +129,35 @@ def ssh_conn(ip):
     print final_serial
 
     uptime = re.search(r"uptime is (.+)\n", output)
-    hour = uptime.group(1)
-    #minutes = uptime.group(2)
+    up_time = uptime.group(1)
+    time_list = up_time.split(', ')
 
-    print hour
-    #print minutes
-    #total_minutes = int(hour)*60 + int(minutes)
-    #print total_minutes
+    year_list = 0
+    week_list = 0
+    day_list = 0
+    hour_list = 0
+    min_list = 0
+
+    for i in time_list:
+        if 'year' in i:
+            year_list = int(i.split(' ')[0]) * 525600
+
+        elif 'week' in i:
+            week_list = int(i.split(' ')[0]) * 10080
+
+        elif 'day' in i:
+            day_list = int(i.split(' ')[0]) * 1440
+
+        elif 'hour' in i:
+            hour_list = int(i.split(' ')[0]) * 60
+
+        elif 'minute' in i:
+            min_list = int(i.split(' ')[0])
+
+    total_time_min = year_list + week_list + day_list + hour_list + min_list
+
+    print total_time_min
+
 
 ssh_conn('192.168.2.10')
 
