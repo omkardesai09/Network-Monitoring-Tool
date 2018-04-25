@@ -3,6 +3,8 @@ import sys
 from colorama import init, deinit, Fore, Style
 import subprocess
 import os.path
+import paramiko
+import re
 
 print "Enter 3 additional parameters(filenames) while execution \n 1. Filename containing IP addresses of devices in topology \n 2. Filename containing username and password to setup SSH connection \n 3. Filename containing credentials to setup connection with MySQL database\n"
 
@@ -20,7 +22,7 @@ else:
 def valid_ip():
     global list_of_ip
     ip_addr_file = open(ip_file, 'r')
-
+    ip_addr_file.seek(0)
     list_of_ip = ip_addr_file.readlines()
     ip_addr_file.close()
     print list_of_ip
@@ -78,6 +80,67 @@ def files_valid():
 valid_ip()
 files_valid()
 
+# Establish SSH connection with devices
+
+def ssh_conn(ip):
+
+    credentials = open('ssh_pass.txt', 'r')
+    credentials.seek(0)
+    username = credentials.readlines()[0].split(',')[0]
+    credentials.seek(0)
+    password = credentials.readlines()[0].split(',')[1].rstrip('\n')
+    credentials.close()
+
+    conn = paramiko.SSHClient()
+    conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    conn.connect(ip, username=username, password=password)
+
+    shell = conn.invoke_shell()
+    shell.send('terminal length 0\n')
+    time.sleep(1)
+
+    commands = '''show version | include (, Version|uptime is|bytes of memory|Processor board ID)&\
+               show interfaces | include bia'''
+
+    commands_list = commands.split('&')
+
+    for each_command in commands_list:
+        shell.send(each_command + '\n')
+        time.sleep(2)
+
+    output = shell.recv(65535)
+    print output
+    print '\n\n'
+
+    hostname = re.search(r"(.+) uptime is", output)
+    final_hostname = hostname.group(1)
+    print final_hostname
+
+    mac = re.findall(r"\(bia (.+?)\)", output)
+    final_mac = mac[0]
+    print final_mac
+
+    model = re.search(r"(.+?) (.+?) (.+) bytes of memory", output)
+    final_model = model.group(2)
+    print final_model
+
+    serial = re.search(r"Processor board ID (.+)", output)
+    final_serial = serial.group(1)
+    print final_serial
+
+    uptime = re.search(r"uptime is (.+)\n", output)
+    hour = uptime.group(1)
+    #minutes = uptime.group(2)
+
+    print hour
+    #print minutes
+    #total_minutes = int(hour)*60 + int(minutes)
+    #print total_minutes
+
+ssh_conn('192.168.2.10')
+
+
+deinit()
 
 
 
