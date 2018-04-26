@@ -5,6 +5,7 @@ import subprocess
 import os.path
 import paramiko
 import re
+import MySQLdb as mdb
 
 print "Enter 3 additional parameters(filenames) while execution \n 1. Filename containing IP addresses of devices in topology \n 2. Filename containing username and password to setup SSH connection \n 3. Filename containing credentials to setup connection with MySQL database\n"
 
@@ -80,11 +81,33 @@ def files_valid():
 valid_ip()
 files_valid()
 
+
+# Setup MySQL connection using Python
+def sql_conn(command, values):
+    sql_file = open(mysql_credentials, 'r')
+    sql_file.seek(0)
+
+    host = sql_file.readlines()[0].split(',')[0]
+    sql_file.seek(0)
+    username = sql_file.readlines()[0].split(',')[1]
+    sql_file.seek(0)
+    password = sql_file.readlines()[0].split(',')[2]
+    sql_file.seek(0)
+    database = sql_file.readlines()[0].split(',')[3].rstrip('\n')
+
+    sql_connection = mdb.connect(host, username, password, database)
+    cursor = sql_connection.cursor()
+    cursor.execute('USE Network_Monitor')
+    cursor.execute(command, values)
+    sql_connection.commit()
+
+    sql_file.close()
+
+
 # Establish SSH connection with devices
 
 def ssh_conn(ip):
-
-    credentials = open('ssh_pass.txt', 'r')
+    credentials = open(ssh_credentials, 'r')
     credentials.seek(0)
     username = credentials.readlines()[0].split(',')[0]
     credentials.seek(0)
@@ -109,26 +132,26 @@ def ssh_conn(ip):
         time.sleep(2)
 
     output = shell.recv(65535)
-    print output
-    print '\n\n'
+    # print output
+    # print '\n\n'
 
-    hostname = re.search(r"(.+) uptime is", output)
+    hostname = re.search(r"([a-zA-Z]\d) uptime is", output)
     final_hostname = hostname.group(1)
     print final_hostname
 
     mac = re.findall(r"\(bia (.+?)\)", output)
     final_mac = mac[0]
-    print final_mac
+    # print final_mac
 
     model = re.search(r"(.+?) (.+?) (.+) bytes of memory", output)
     final_model = model.group(2)
-    print final_model
+    # print final_model
 
     serial = re.search(r"Processor board ID (.+)", output)
     final_serial = serial.group(1)
-    print final_serial
+    # print final_serial
 
-    uptime = re.search(r"uptime is (.+)\n", output)
+    uptime = re.search(r" uptime is (.+)\n", output)
     up_time = uptime.group(1)
     time_list = up_time.split(', ')
 
@@ -155,12 +178,16 @@ def ssh_conn(ip):
             min_list = int(i.split(' ')[0])
 
     total_time_min = year_list + week_list + day_list + hour_list + min_list
-
     print total_time_min
+    print type(total_time_min)
+
+    sql_conn('INSERT INTO device(Uptime,MAC,Hostname,Model,SN) VALUES(%s,%s,%s,%s,%s)', (total_time_min, final_mac, final_hostname, final_model, final_serial))
+    # sql_conn('INSERT INTO device(MAC,Model,SN) VALUES(%s,%s,%s)', (final_mac,final_model,final_serial))
+
+    conn.close()
 
 
 ssh_conn('192.168.2.10')
-
 
 deinit()
 
